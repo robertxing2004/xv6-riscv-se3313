@@ -2748,6 +2748,91 @@ lazy_sbrk(char *s)
   exit(0);
 }
 
+void
+getprocstest(char *s)
+{
+  struct pinfo info[NPROC];
+
+  int n = getprocs(info, NPROC);
+  if(n < 1){
+    printf("%s: getprocs returned %d, expected >= 1\n", s, n);
+    exit(1);
+  }
+
+  int mypid = getpid();
+  int found = 0;
+  for(int i = 0; i < n; i++){
+    if(info[i].pid == mypid){
+      found = 1;
+      if(info[i].state < 0 || info[i].state > 5){
+        printf("%s: bad state %d for pid %d\n", s, info[i].state, mypid);
+        exit(1);
+      }
+      if(info[i].sz == 0){
+        printf("%s: sz is 0 for pid %d\n", s, mypid);
+        exit(1);
+      }
+      if(strlen(info[i].name) == 0){
+        printf("%s: empty name for pid %d\n", s, mypid);
+        exit(1);
+      }
+    }
+  }
+  if(!found){
+    printf("%s: own pid %d not found in getprocs\n", s, mypid);
+    exit(1);
+  }
+
+  // nmax=0 should return 0
+  if(getprocs(info, 0) != 0){
+    printf("%s: getprocs with nmax=0 should return 0\n", s);
+    exit(1);
+  }
+
+  // nmax=1 should return exactly 1
+  if(getprocs(info, 1) != 1){
+    printf("%s: getprocs with nmax=1 should return 1\n", s);
+    exit(1);
+  }
+
+  // fork a child and check count increases
+  int n_before = getprocs(info, NPROC);
+  int pid = fork();
+  if(pid < 0){
+    printf("%s: fork failed\n", s);
+    exit(1);
+  }
+  if(pid == 0){
+    pause(20);
+    exit(0);
+  }
+  pause(2);
+  int n_after = getprocs(info, NPROC);
+  if(n_after <= n_before){
+    printf("%s: proc count did not increase after fork (%d -> %d)\n",
+           s, n_before, n_after);
+    kill(pid);
+    wait(0);
+    exit(1);
+  }
+
+  // check the child appears in the list
+  found = 0;
+  for(int i = 0; i < n_after; i++){
+    if(info[i].pid == pid)
+      found = 1;
+  }
+  if(!found){
+    printf("%s: child pid %d not found in getprocs\n", s, pid);
+    kill(pid);
+    wait(0);
+    exit(1);
+  }
+
+  kill(pid);
+  wait(0);
+}
+
 struct test {
   void (*f)(char *);
   char *s;
@@ -2816,6 +2901,7 @@ struct test {
   {lazy_unmap, "lazy_unmap"},
   {lazy_copy, "lazy_copy"},
   {lazy_sbrk, "lazy_sbrk"},
+  {getprocstest, "getprocstest"},
   { 0, 0},
 };
 
