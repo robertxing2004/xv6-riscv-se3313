@@ -5,14 +5,18 @@
 #define REFRESH_TICKS 10
 
 static char *statenames[] = {
-  "unused", "used", "sleep", "runble", "run", "zombie"
+  "unused", "used", "sleep", "runble", "run", "suspend", "zombie"
 };
 
 static char*
-statename(int s)
+statename(struct pinfo *p)
 {
-  if(s >= 0 && s <= 5)
-    return statenames[s];
+  if(p->hibernating)
+    return "hib-wip";
+  if(p->hibernated)
+    return "hibern";
+  if(p->state >= 0 && p->state <= 6)
+    return statenames[p->state];
   return "???";
 }
 
@@ -93,7 +97,7 @@ main(int argc, char *argv[])
              cur[i].name,
              cpu_pct,
              (int)(cur[i].sz / 1024),
-             statename(cur[i].state));
+             statename(&cur[i]));
     }
 
     // swap buffers

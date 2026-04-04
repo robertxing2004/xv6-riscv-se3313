@@ -5,6 +5,8 @@
 struct pinfo {
   int pid;
   int state;
+  int hibernated;
+  int hibernating;
   uint64 sz;
   uint64 ticks;
   char name[PNAMESIZE];
@@ -36,6 +38,9 @@ int pause(int);
 int uptime(void);
 int getprocs(struct pinfo*, int);
 int freemem(void);
+int suspend(int);
+int resume(int);
+int hibernate(int);
 
 // ulib.c
 int stat(const char*, struct stat*);
